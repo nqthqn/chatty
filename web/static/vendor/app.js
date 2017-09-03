@@ -9915,58 +9915,161 @@ var _fbonetti$elm_phoenix_socket$Phoenix_Socket$listen = F2(
 			});
 	});
 
-var _user$project$App$view = function (model) {
-	return _elm_lang$html$Html$text(
-		_elm_lang$core$Basics$toString(model));
-};
-var _user$project$App$chattyUrl = 'ws://localhost:4000/socket/websocket';
-var _user$project$App$initModel = {
-	msgs: {
+var _user$project$Chatty$userParams = _elm_lang$core$Json_Encode$object(
+	{
 		ctor: '::',
-		_0: 'nada',
+		_0: {
+			ctor: '_Tuple2',
+			_0: 'user_id',
+			_1: _elm_lang$core$Json_Encode$string('123')
+		},
 		_1: {ctor: '[]'}
-	},
-	phxSocket: _fbonetti$elm_phoenix_socket$Phoenix_Socket$init(_user$project$App$chattyUrl)
-};
-var _user$project$App$Model = F2(
-	function (a, b) {
-		return {msgs: a, phxSocket: b};
 	});
-var _user$project$App$PhoenixMsg = function (a) {
+var _user$project$Chatty$chattyUrl = 'ws://localhost:4000/socket/websocket';
+var _user$project$Chatty$initModel = {
+	newMessage: 'Hey',
+	phxSocket: _fbonetti$elm_phoenix_socket$Phoenix_Socket$init(_user$project$Chatty$chattyUrl),
+	messages: {ctor: '[]'}
+};
+var _user$project$Chatty$Model = F3(
+	function (a, b, c) {
+		return {phxSocket: a, newMessage: b, messages: c};
+	});
+var _user$project$Chatty$ChatMessage = F2(
+	function (a, b) {
+		return {user: a, body: b};
+	});
+var _user$project$Chatty$chatMessageDecoder = A3(
+	_elm_lang$core$Json_Decode$map2,
+	_user$project$Chatty$ChatMessage,
+	A2(_elm_lang$core$Json_Decode$field, 'user', _elm_lang$core$Json_Decode$string),
+	A2(_elm_lang$core$Json_Decode$field, 'body', _elm_lang$core$Json_Decode$string));
+var _user$project$Chatty$PhoenixMsg = function (a) {
 	return {ctor: 'PhoenixMsg', _0: a};
 };
-var _user$project$App$update = F2(
+var _user$project$Chatty$initCmd = function () {
+	var channel = A2(
+		_fbonetti$elm_phoenix_socket$Phoenix_Channel$withPayload,
+		_user$project$Chatty$userParams,
+		_fbonetti$elm_phoenix_socket$Phoenix_Channel$init('rooms:lobby'));
+	var _p0 = A2(
+		_fbonetti$elm_phoenix_socket$Phoenix_Socket$join,
+		channel,
+		_fbonetti$elm_phoenix_socket$Phoenix_Socket$init(_user$project$Chatty$chattyUrl));
+	var phxCmd = _p0._1;
+	return A2(_elm_lang$core$Platform_Cmd$map, _user$project$Chatty$PhoenixMsg, phxCmd);
+}();
+var _user$project$Chatty$init = {ctor: '_Tuple2', _0: _user$project$Chatty$initModel, _1: _user$project$Chatty$initCmd};
+var _user$project$Chatty$update = F2(
 	function (msg, model) {
-		var _p0 = msg;
-		if (_p0.ctor === 'PhoenixMsg') {
-			var _p1 = A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$update, _p0._0, model.phxSocket);
-			var phxSocket = _p1._0;
-			var phxCmd = _p1._1;
-			return {
-				ctor: '_Tuple2',
-				_0: _elm_lang$core$Native_Utils.update(
-					model,
-					{phxSocket: phxSocket}),
-				_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$App$PhoenixMsg, phxCmd)
-			};
-		} else {
-			return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+		var _p1 = msg;
+		switch (_p1.ctor) {
+			case 'PhoenixMsg':
+				var _p2 = A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$update, _p1._0, model.phxSocket);
+				var phxSocket = _p2._0;
+				var phxCmd = _p2._1;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{phxSocket: phxSocket}),
+					_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$Chatty$PhoenixMsg, phxCmd)
+				};
+			case 'SendMessage':
+				var payload = _elm_lang$core$Json_Encode$object(
+					{
+						ctor: '::',
+						_0: {
+							ctor: '_Tuple2',
+							_0: 'user',
+							_1: _elm_lang$core$Json_Encode$string('user')
+						},
+						_1: {
+							ctor: '::',
+							_0: {
+								ctor: '_Tuple2',
+								_0: 'body',
+								_1: _elm_lang$core$Json_Encode$string(model.newMessage)
+							},
+							_1: {ctor: '[]'}
+						}
+					});
+				var push_ = A2(
+					_fbonetti$elm_phoenix_socket$Phoenix_Push$withPayload,
+					payload,
+					A2(_fbonetti$elm_phoenix_socket$Phoenix_Push$init, 'new:msg', 'rooms:lobby'));
+				var _p3 = A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$push, push_, model.phxSocket);
+				var phxSocket = _p3._0;
+				var phxCmd = _p3._1;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{phxSocket: phxSocket}),
+					_1: A2(_elm_lang$core$Platform_Cmd$map, _user$project$Chatty$PhoenixMsg, phxCmd)
+				};
+			default:
+				var _p4 = A2(_elm_lang$core$Json_Decode$decodeValue, _user$project$Chatty$chatMessageDecoder, _p1._0);
+				if (_p4.ctor === 'Ok') {
+					var _p5 = _p4._0;
+					return {
+						ctor: '_Tuple2',
+						_0: _elm_lang$core$Native_Utils.update(
+							model,
+							{
+								messages: {
+									ctor: '::',
+									_0: A2(
+										_elm_lang$core$Basics_ops['++'],
+										_p5.user,
+										A2(_elm_lang$core$Basics_ops['++'], ': ', _p5.body)),
+									_1: model.messages
+								}
+							}),
+						_1: _elm_lang$core$Platform_Cmd$none
+					};
+				} else {
+					var _p6 = A2(_elm_lang$core$Debug$log, 'err', _p4._0);
+					return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+				}
 		}
 	});
-var _user$project$App$subscriptions = function (model) {
-	return A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$listen, model.phxSocket, _user$project$App$PhoenixMsg);
+var _user$project$Chatty$subscriptions = function (model) {
+	return A2(_fbonetti$elm_phoenix_socket$Phoenix_Socket$listen, model.phxSocket, _user$project$Chatty$PhoenixMsg);
 };
+var _user$project$Chatty$RecieveMessage = function (a) {
+	return {ctor: 'RecieveMessage', _0: a};
+};
+var _user$project$Chatty$SendMessage = {ctor: 'SendMessage'};
+var _user$project$Chatty$view = function (model) {
+	return A2(
+		_elm_lang$html$Html$div,
+		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: _elm_lang$html$Html$text(
+				_elm_lang$core$Basics$toString(model)),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$button,
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html_Events$onClick(_user$project$Chatty$SendMessage),
+						_1: {ctor: '[]'}
+					},
+					{
+						ctor: '::',
+						_0: _elm_lang$html$Html$text('Say hey.'),
+						_1: {ctor: '[]'}
+					}),
+				_1: {ctor: '[]'}
+			}
+		});
+};
+
 var _user$project$App$main = _elm_lang$html$Html$program(
-	{
-		update: _user$project$App$update,
-		view: _user$project$App$view,
-		init: {ctor: '_Tuple2', _0: _user$project$App$initModel, _1: _elm_lang$core$Platform_Cmd$none},
-		subscriptions: _user$project$App$subscriptions
-	})();
-var _user$project$App$Echo = function (a) {
-	return {ctor: 'Echo', _0: a};
-};
-var _user$project$App$NoOp = {ctor: 'NoOp'};
+	{update: _user$project$Chatty$update, view: _user$project$Chatty$view, init: _user$project$Chatty$init, subscriptions: _user$project$Chatty$subscriptions})();
 
 var Elm = {};
 Elm['App'] = Elm['App'] || {};
