@@ -1,7 +1,6 @@
 module Chatty exposing (..)
 
 import Html exposing (..)
-import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Phoenix.Socket
 import Phoenix.Channel
@@ -27,18 +26,18 @@ initModel =
 
 init : ( Model, Cmd Msg )
 init =
-    ( initModel, initCmd )
+    ( initModel, initCmd initModel.phxSocket )
 
 
-initCmd : Cmd Msg
-initCmd =
+initCmd : Phoenix.Socket.Socket Msg -> Cmd Msg
+initCmd phxSocket =
     let
         channel =
             Phoenix.Channel.init "rooms:lobby"
                 |> Phoenix.Channel.withPayload userParams
 
         ( _, phxCmd ) =
-            Phoenix.Socket.join channel (Phoenix.Socket.init chattyUrl)
+            Phoenix.Socket.join channel phxSocket
     in
         Cmd.map PhoenixMsg phxCmd
 
@@ -75,6 +74,9 @@ update msg model =
             let
                 payload =
                     (JE.object [ ( "user", JE.string "user" ), ( "body", JE.string model.newMessage ) ])
+
+                _ =
+                    Debug.log "o" model.newMessage
 
                 push_ =
                     Phoenix.Push.init "new:msg" "rooms:lobby"
@@ -120,7 +122,7 @@ chatMessageDecoder =
 view : Model -> Html Msg
 view model =
     div []
-        [ text <| toString model
+        [ text <| toString model.messages
         , button [ onClick SendMessage ] [ text "Say hey." ]
         ]
 

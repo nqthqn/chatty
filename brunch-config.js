@@ -55,6 +55,7 @@ exports.config = {
     elmBrunch: {
       elmFolder: "web/elm",
       mainModules: ["App.elm"],
+      makeParameters: ['--debug'],
       outputFolder: "../static/vendor"
     },
     babel: {
